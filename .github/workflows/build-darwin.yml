@@ -9,6 +9,8 @@ env:
   SM_REF: RELEASE_7_5
   UPSTREAM: https://github.com/smartmontools/smartmontools.git
   BRAND: SmartmonTools Develop
+  # Upstream keeps the sources one level down: <repo>/smartmontools/.
+  SRC: src/smartmontools
 
 jobs:
   dmg:
@@ -19,37 +21,42 @@ jobs:
 
       - name: Toolchain info
         run: |
-          xcodebuild -version || true
+          set +e
+          xcodebuild -version
           sw_vers
-          which autoconf automake libtool pkgbuild productbuild hdiutil
+          for t in autoconf automake libtool pkgbuild productbuild hdiutil git; do
+            printf '%-14s %s\n' "$t" "$(command -v "$t" || echo MISSING)"
+          done
+          exit 0
 
       - name: Fetch upstream sources
         run: |
           git clone --depth 1 --branch "$SM_REF" "$UPSTREAM" src
           git -C src rev-parse HEAD | tee src_rev.txt
+          test -f "$SRC/configure.ac" || { echo "::error::$SRC/configure.ac missing"; ls -la src; exit 1; }
           echo "Building upstream revision: $(cat src_rev.txt)"
 
       - name: Configure
-        working-directory: src
+        working-directory: src/smartmontools
         run: |
           ./autogen.sh
           ./configure --prefix=/usr/local
 
       - name: Build
-        working-directory: src
+        working-directory: src/smartmontools
         run: make -j"$(sysctl -n hw.ncpu)"
 
       - name: Stage install tree
-        working-directory: src
+        working-directory: src/smartmontools
         run: |
+          set -e
           DESTDIR="$RUNNER_TEMP/root" make install
-          # Upstream also ships this uninstall helper; ship it too.
           install -d "$RUNNER_TEMP/root/usr/local/sbin"
           install -m 0755 os_darwin/pkg/root/usr/local/sbin/smart-pkg-uninstall \
                   "$RUNNER_TEMP/root/usr/local/sbin/"
           echo "--- payload preview ---"
-          find "$RUNNER_TEMP/root" -maxdepth 5 -type d | head -20
-          find "$RUNNER_TEMP/root" -name 'smartctl' -o -name 'smartd' | head -5
+          find "$RUNNER_TEMP/root" -maxdepth 4 -type d | head -20
+          find "$RUNNER_TEMP/root" -name smartctl -o -name smartd | head -5
 
       - name: Build component pkg
         run: |
