@@ -39,15 +39,16 @@
 
 ## 下载
 
-| 平台 | 产物 | 构建方式 |
+最新构建见 [Releases](https://github.com/fengfeng-commits/smartmontools-develop/releases/tag/latest)，两个产物均由 GitHub Actions 构建：
+
+| 平台 | 文件 | 构建方式 |
 |---|---|---|
-| Windows | `smartmontools-develop-win32-setup.exe` | 解包官方安装器 + 品牌补丁 + `makensis` 重打包 |
-| macOS | `smartmontools-develop.dmg` | CI（macOS runner）源码编译 + `pkgbuild` + `hdiutil` |
+| Windows | `smartmontools-develop-win64.zip` | `build-windows.yml`：ubuntu + MinGW-w64 交叉编译 |
+| macOS | `smartmontools-develop.dmg` | `build-darwin.yml`：macos-latest + `pkgbuild` + `hdiutil` |
 
-文件名均带 `develop` 以区别于官方发行包。
+macOS 产物当前是 **arm64 单架构**，Intel Mac 不可用。两者都没有代码签名，系统会提示「未知发布者」：Windows 走 SmartScreen，macOS 需右键打开或先执行 `xattr -dr com.apple.quarantine`。
 
-macOS 的 dmg 只能由 `.github/workflows/build-darwin.yml` 产出：dmg 是 HFS+ 卷加 UDIF 封装，
-Windows 上没有任何工具能写入这种格式，而 GitHub 的 macOS runner 自带 `pkgbuild` 与 `hdiutil`。
+仓库另外提供一个不依赖 CI 的本地重打包脚本 `scripts/build-installer.ps1`，用官方 Windows 安装器解包后重打，产物名为 `*-setup.exe`，与上面的 zip 是两条独立路线。
 
 ## 构建
 
