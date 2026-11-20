@@ -11,6 +11,10 @@ env:
   BRAND: SmartmonTools Develop
   # Upstream keeps the sources one level down: <repo>/smartmontools/.
   SRC: src/smartmontools
+  # autogen.sh probes for versioned names like automake-1.16, which modern
+  # toolchains no longer ship. It honours these overrides instead.
+  AUTOMAKE: automake
+  ACLOCAL: aclocal
 
 jobs:
   dmg:
@@ -28,6 +32,15 @@ jobs:
             printf '%-14s %s\n' "$t" "$(command -v "$t" || echo MISSING)"
           done
           exit 0
+
+      - name: Ensure autotools
+        run: |
+          set -e
+          if ! command -v automake >/dev/null 2>&1; then
+            brew install automake autoconf libtool
+          fi
+          automake --version | head -1
+          autoconf --version | head -1
 
       - name: Fetch upstream sources
         run: |
