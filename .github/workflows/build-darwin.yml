@@ -1,0 +1,85 @@
+name: build-darwin
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  SM_REF: RELEASE_7_5
+  UPSTREAM: https://github.com/smartmontools/smartmontools.git
+  BRAND: SmartmonTools Develop
+
+jobs:
+  dmg:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: |
+          xcodebuild -version || true
+          sw_vers
+          which autoconf automake libtool pkgbuild productbuild hdiutil
+
+      - name: Fetch upstream sources
+        run: |
+          git clone --depth 1 --branch "$SM_REF" "$UPSTREAM" src
+          git -C src rev-parse HEAD | tee src_rev.txt
+          echo "Building upstream revision: $(cat src_rev.txt)"
+
+      - name: Configure
+        working-directory: src
+        run: |
+          ./autogen.sh
+          ./configure --prefix=/usr/local
+
+      - name: Build
+        working-directory: src
+        run: make -j"$(sysctl -n hw.ncpu)"
+
+      - name: Stage install tree
+        working-directory: src
+        run: |
+          DESTDIR="$RUNNER_TEMP/root" make install
+          # Upstream also ships this uninstall helper; ship it too.
+          install -d "$RUNNER_TEMP/root/usr/local/sbin"
+          install -m 0755 os_darwin/pkg/root/usr/local/sbin/smart-pkg-uninstall \
+                  "$RUNNER_TEMP/root/usr/local/sbin/"
+          echo "--- payload preview ---"
+          find "$RUNNER_TEMP/root" -maxdepth 5 -type d | head -20
+          find "$RUNNER_TEMP/root" -name 'smartctl' -o -name 'smartd' | head -5
+
+      - name: Build component pkg
+        run: |
+          set -e
+          VERSION="$(echo "${SM_REF#RELEASE_}" | tr '_' '.')"
+          echo "pkg version: $VERSION"
+          pkgbuild --root "$RUNNER_TEMP/root" \
+                   --identifier com.smartmontools.pkg \
+                   --version "$VERSION" \
+                   --install-location / \
+                   "$RUNNER_TEMP/smartmontools-develop.pkg"
+          pkgutil --payload-files "$RUNNER_TEMP/smartmontools-develop.pkg" | head -20
+
+      - name: Build dmg
+        run: |
+          set -e
+          mkdir -p dmg
+          cp "$RUNNER_TEMP/smartmontools-develop.pkg" dmg/
+          cp darwin/README.html dmg/README.html
+          cp NOTICE dmg/ 2>/dev/null || true
+          # HFS+ keeps compatibility with older macOS; UDZO matches upstream's
+          # ZLIB-compressed image.
+          hdiutil create -volname "$BRAND" -srcfolder dmg -fs HFS+ \
+                         -format UDZO -ov "smartmontools-develop.dmg"
+          ls -l smartmontools-develop.dmg
+          hdiutil imageinfo smartmontools-develop.dmg | head -20
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartmontools-develop-dmg
+          path: smartmontools-develop.dmg
+          if-no-files-found: error
