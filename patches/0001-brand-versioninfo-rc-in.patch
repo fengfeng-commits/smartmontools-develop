@@ -1,0 +1,19 @@
+--- a/os_win32/versioninfo.rc.in
++++ b/os_win32/versioninfo.rc.in
+@@ -17,13 +17,13 @@
+     BEGIN
+         BLOCK "04090000"
+         BEGIN
+-            VALUE "CompanyName", "www.smartmontools.org"
++            VALUE "CompanyName", "SmartmonTools Develop"
+             VALUE "FileDescription", "@DESC@"
+             VALUE "FileVersion", "@TEXT_VERSION@"
+             VALUE "InternalName", "@NAME@"
+-            VALUE "LegalCopyright", "(C) 2002-@YY@, Bruce Allen, Christian Franke, www.smartmontools.org"
++            VALUE "LegalCopyright", "(C) 2002-@YY@, Bruce Allen, Christian Franke, www.smartmontools.org; modifications (C) 2026 SmartmonTools Develop"
+             VALUE "OriginalFilename", "@NAME@.exe"
+-            VALUE "ProductName", "smartmontools"
++            VALUE "ProductName", "SmartmonTools Develop"
+             VALUE "ProductVersion", "@TEXT_VERSION@"
+         END
+     END
