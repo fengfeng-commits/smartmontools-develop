@@ -12,6 +12,10 @@ env:
   UPSTREAM: https://github.com/smartmontools/smartmontools.git
   # Upstream keeps the sources one level down: <repo>/smartmontools/.
   SRC: src/smartmontools
+  # autogen.sh probes for versioned names like automake-1.16, which modern
+  # distros no longer ship. It honours these overrides instead.
+  AUTOMAKE: automake
+  ACLOCAL: aclocal
 
 jobs:
   win64:
