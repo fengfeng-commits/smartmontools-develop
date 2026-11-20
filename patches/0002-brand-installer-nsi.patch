@@ -1,0 +1,47 @@
+--- a/os_win32/installer.nsi
++++ b/os_win32/installer.nsi
+@@ -17,6 +17,8 @@
+ ;   -DOUTFILE=<output-file> -DVERSTR=<version-string> -DYY=<year> \
+ ;   installer.nsi
+ 
++Unicode true
++
+ !ifndef INPDIR
+   !define INPDIR "."
+ !endif
+@@ -28,7 +30,7 @@
+ ;--------------------------------------------------------------------
+ ; General
+ 
+-Name "smartmontools"
++Name "SmartmonTools Develop"
+ OutFile "${OUTFILE}"
+ 
+ RequestExecutionLevel admin
+@@ -44,14 +46,14 @@
+ 
+ !ifdef VERSION
+   VIProductVersion "${VERSION}"
+-  VIAddVersionKey /LANG=1033-English "CompanyName" "www.smartmontools.org"
++  VIAddVersionKey /LANG=1033-English "CompanyName" "SmartmonTools Develop"
+   VIAddVersionKey /LANG=1033-English "FileDescription" "SMART Monitoring Tools"
+   VIAddVersionKey /LANG=1033-English "FileVersion" "${VERSION}"
+  !ifdef YY
+-  VIAddVersionKey /LANG=1033-English "LegalCopyright" "(C) 2002-20${YY}, Bruce Allen, Christian Franke, www.smartmontools.org"
++  VIAddVersionKey /LANG=1033-English "LegalCopyright" "(C) 2002-20${YY}, Bruce Allen, Christian Franke, www.smartmontools.org; modifications (C) 2026 SmartmonTools Develop"
+  !endif
+   VIAddVersionKey /LANG=1033-English "OriginalFilename" "${OUTFILE}"
+-  VIAddVersionKey /LANG=1033-English "ProductName" "smartmontools"
++  VIAddVersionKey /LANG=1033-English "ProductName" "SmartmonTools Develop"
+   VIAddVersionKey /LANG=1033-English "ProductVersion" "${VERSION}"
+ !endif
+ 
+@@ -241,7 +243,7 @@
+   CreateDirectory "$INSTDIR"
+ 
+   ; Write uninstall keys and program
+-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\smartmontools" "DisplayName" "smartmontools"
++  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\smartmontools" "DisplayName" "SmartmonTools Develop"
+ !ifdef VERSTR
+   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\smartmontools" "DisplayVersion" "${VERSTR}"
+ !endif
