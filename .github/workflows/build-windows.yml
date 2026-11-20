@@ -1,0 +1,117 @@
+name: build-windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # Pin the upstream revision so every build is reproducible.
+  # The patches were generated against and verified on this tag.
+  SM_REF: RELEASE_7_5
+  UPSTREAM: https://github.com/smartmontools/smartmontools.git
+
+jobs:
+  win64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool gettext pkg-config \
+            mingw-w64 g++-mingw-w64-x86-64 \
+            nsis zip unzip
+
+      - name: Fetch upstream sources
+        run: |
+          git clone --depth 1 --branch "$SM_REF" "$UPSTREAM" src
+          git -C src rev-parse HEAD | tee src_rev.txt
+          echo "Building upstream revision: $(cat src_rev.txt)"
+
+      - name: Apply patches
+        run: |
+          shopt -s nullglob
+          patches=(patches/*.patch)
+          if [ ${#patches[@]} -eq 0 ]; then
+            echo "No patches in patches/ — building pristine upstream."
+            exit 0
+          fi
+          for p in "${patches[@]}"; do
+            echo "::group::apply $p"
+            git -C src apply -v "$(realpath "$p")"
+            echo "::endgroup::"
+          done
+
+      - name: Bootstrap
+        working-directory: src
+        run: ./autogen.sh
+
+      - name: Configure (mingw-w64 cross)
+        working-directory: src
+        run: ./configure --build=x86_64-pc-linux-gnu --host=x86_64-w64-mingw32
+
+      - name: Build
+        working-directory: src
+        run: make -j"$(nproc)"
+
+      # Best effort: upstream's own NSIS packaging. Needs the 32-bit tree in
+      # bin32/, which a single-host build may not produce, so this is allowed
+      # to fail without killing the run.
+      - name: Try upstream NSIS installer (non-blocking)
+        working-directory: src
+        continue-on-error: true
+        run: |
+          make dist-win32 || true
+          make installer-win32 || true
+          ls -l *.zip *.exe 2>/dev/null || true
+
+      - name: Package
+        run: |
+          set -e
+          mkdir -p out
+          count=0
+          while IFS= read -r f; do
+            parent=$(basename "$(dirname "$f")")
+            case "$parent" in
+              bin32) dest=out/bin32 ;;
+              *)     dest=out/bin ;;
+            esac
+            mkdir -p "$dest"
+            cp "$f" "$dest/"
+            count=$((count + 1))
+          done < <(find src -maxdepth 3 -type f -name '*.exe')
+
+          echo "collected $count exe file(s)"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No .exe produced — cross build failed. Check configure parameters."
+            exit 1
+          fi
+
+          for extra in drivedb.h smartd.conf COPYING NEWS; do
+            [ -f "src/$extra" ] && cp "src/$extra" out/ || true
+          done
+          cp NOTICE out/ 2>/dev/null || true
+          cp src/COPYING out/ 2>/dev/null || true
+          cp src_rev.txt out/UPSTREAM_REVISION.txt 2>/dev/null || true
+
+          # Ship upstream's installer too, if it was built.
+          for f in src/*win32-setup.exe src/*.win32.zip; do
+            [ -f "$f" ] && cp "$f" out/ || true
+          done
+
+          name="smartmontools-develop-win64-${GITHUB_SHA::7}"
+          (cd out && zip -9 -r "../${name}.zip" .)
+          unzip -l "${name}.zip"
+          ls -l "${name}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartmontools-develop-win64
+          path: smartmontools-develop-win64-*.zip
+          if-no-files-found: error
