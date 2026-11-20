@@ -1,0 +1,28 @@
+smartmontools (develop build) — NOTICE
+======================================
+
+Upstream project:
+  https://github.com/smartmontools/smartmontools
+  Copyright (C) 2002-2025 Bruce Allen, Christian Franke, and contributors
+
+This distribution is a MODIFIED version of smartmontools. It is not an
+official release of the smartmontools project and is not endorsed by it.
+
+License:
+  GNU General Public License, version 2 or (at your option) any later version.
+  The full license text is in COPYING, taken unmodified from upstream.
+
+Corresponding source code:
+  Upstream sources : https://github.com/smartmontools/smartmontools
+  Modifications    : patches/*.patch in this repository
+  Build recipe     : .github/workflows/build-windows.yml
+  Any binary in the Release page can be reproduced by checking out the
+  upstream revision named in that Release, applying every patch in
+  patches/ in filename order, and running the workflow.
+
+Modifications:
+  (none yet — this repository currently ships an unmodified build)
+
+If you redistribute a binary built from this repository, you must keep this
+NOTICE, the COPYING file, and make the corresponding source available as
+described above.
